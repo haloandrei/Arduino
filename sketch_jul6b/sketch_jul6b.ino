@@ -1,5 +1,5 @@
 // Define the GPIO pin where the LED is connected
-#define LED_PIN 19
+#define LED_PIN 2
 
 void setup() {
   // Initialize the LED_PIN as an output
