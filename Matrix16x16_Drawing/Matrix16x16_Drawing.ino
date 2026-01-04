@@ -7,16 +7,16 @@ ArduinoLEDMatrix ipMatrix;
 // NeoPixel matrix
 #include <Adafruit_NeoPixel.h>
 
-#define LED_PIN   12
-#define NUM_LEDS  256
-#define WIDTH     16
-#define HEIGHT    16
+#define LED_PIN 12
+#define NUM_LEDS 256
+#define WIDTH 16
+#define HEIGHT 16
 
 Adafruit_NeoPixel strip(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
 
 // ===== WiFi credentials =====
-const char WIFI_SSID[] = "Galaxy S25 B5F6";
-const char WIFI_PASS[] = "1234halomine";
+const char WIFI_SSID[] = "BradOEL";
+const char WIFI_PASS[] = "1234halomine2";
 // ===========================
 
 WiFiServer server(80);
@@ -70,7 +70,9 @@ void setPixelXY(int x, int y, int r, int g, int b) {
   uint8_t G = cap128(g);
   uint8_t B = cap128(b);
 
-  fbR[idx] = R; fbG[idx] = G; fbB[idx] = B;
+  fbR[idx] = R;
+  fbG[idx] = G;
+  fbB[idx] = B;
   strip.setPixelColor(idx, strip.Color(R, G, B));
 }
 
@@ -93,7 +95,7 @@ void connectToWiFiAndGetIP() {
   unsigned long start = millis();
   const unsigned long ipTimeout = 20000;
 
-  while (ip == IPAddress(0,0,0,0) && (millis() - start) < ipTimeout) {
+  while (ip == IPAddress(0, 0, 0, 0) && (millis() - start) < ipTimeout) {
     delay(200);
     ip = WiFi.localIP();
   }
@@ -116,7 +118,7 @@ void scrollIPOnBuiltinMatrix() {
   ipMatrix.endDraw();
 }
 
-void sendOK(WiFiClient &client, const char *ctype="text/html") {
+void sendOK(WiFiClient &client, const char *ctype = "text/html") {
   client.print(F("HTTP/1.1 200 OK\r\n"));
   client.print(F("Connection: close\r\n"));
   client.print(F("Cache-Control: no-store\r\n"));
@@ -131,13 +133,14 @@ void send404(WiFiClient &client) {
 
 String urlDecode(const String &s) {
   // Minimal decode: handles %xx and +
-  String out; out.reserve(s.length());
+  String out;
+  out.reserve(s.length());
   for (int i = 0; i < (int)s.length(); i++) {
     char c = s[i];
     if (c == '+') out += ' ';
     else if (c == '%' && i + 2 < (int)s.length()) {
-      char h1 = s[i+1], h2 = s[i+2];
-      auto hex = [](char h)->int {
+      char h1 = s[i + 1], h2 = s[i + 2];
+      auto hex = [](char h) -> int {
         if (h >= '0' && h <= '9') return h - '0';
         if (h >= 'A' && h <= 'F') return 10 + (h - 'A');
         if (h >= 'a' && h <= 'f') return 10 + (h - 'a');
@@ -287,12 +290,8 @@ document.getElementById('reip').addEventListener('click', ()=>{
 }
 
 void handlePixel(WiFiClient &client, const String &path) {
-  int x=0,y=0, rr=0, gg=0, bb=0;
-  if (!getQueryParam(path, "x", x) ||
-      !getQueryParam(path, "y", y) ||
-      !getQueryParam(path, "r", rr) ||
-      !getQueryParam(path, "g", gg) ||
-      !getQueryParam(path, "b", bb)) {
+  int x = 0, y = 0, rr = 0, gg = 0, bb = 0;
+  if (!getQueryParam(path, "x", x) || !getQueryParam(path, "y", y) || !getQueryParam(path, "r", rr) || !getQueryParam(path, "g", gg) || !getQueryParam(path, "b", bb)) {
     sendOK(client, "text/plain");
     client.println("missing params");
     return;
@@ -327,7 +326,7 @@ void setup() {
 
   // NeoPixel
   strip.begin();
-  strip.setBrightness(128); // global cap (0..255). Keeps peak current down.
+  strip.setBrightness(128);  // global cap (0..255). Keeps peak current down.
   clearMatrixPixels();
 
   connectToWiFiAndGetIP();
@@ -346,7 +345,7 @@ void loop() {
 
   // Read request line
   String requestLine = client.readStringUntil('\r');
-  client.read(); // '\n'
+  client.read();  // '\n'
   // Example: GET /px?x=1&y=2&r=10&g=0&b=0 HTTP/1.1
 
   int sp1 = requestLine.indexOf(' ');

@@ -25,7 +25,7 @@ void loop() {
     matrix.textScrollSpeed(65); // Set a moderate scroll speed
 
     // Prepare the string message
-    String message = "a = " + String(a);
+    String message = "Autobuzul 2A soseste in 10min ";
 
     // Prepare text display
     matrix.textFont(Font_5x7);  // Set font size

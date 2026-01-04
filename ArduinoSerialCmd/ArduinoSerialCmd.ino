@@ -11,7 +11,7 @@ void matrix_begin_settings();
 void matrix_end_settings();
 
 int a = 0;
-int b = 12;
+int b = 36;
 
 
 void loop() {
@@ -19,10 +19,25 @@ void loop() {
   if (Serial.available() > 0) {
     // Read the input from the serial monitor as an integer
     a = Serial.parseInt();
+    String message;
 
-    // Prepare the message with the updated value of 'a'
-    String message = "  a = " + String(a+b);
+    int aux = a, cont=0;
 
+    while(a>0){
+      cont++;
+      a = a/10;
+    }
+    a= aux;
+
+    if(cont%2==0)
+    {
+      int varluiCata = cont-2/2;
+     message = "    "+String(a/10%100) ;}
+    else 
+    {
+      message = "    "+String(a/100%10) ;
+      }
+ 
     matrix_begin_settings();
     matrix.println(message);  // Print the message with the current value of 'a'
     matrix_end_settings();
@@ -36,7 +51,7 @@ void matrix_begin_settings(){
   // Clear the previous display and prepare to display the new message
     matrix.beginDraw();
     matrix.stroke(0xFFFFFF);    // Set color to white
-    matrix.textScrollSpeed(75); // Set a moderate scroll speed
+    matrix.textScrollSpeed(60); // Set a moderate scroll speed
     matrix.textFont(Font_5x7);  // Set font size
     matrix.beginText(0, 1, 0xFFFFFF);  // Begin text at position (0,1)
 }

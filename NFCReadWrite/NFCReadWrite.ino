@@ -12,7 +12,7 @@ Adafruit_PN532 nfc(PIN_SPI_SS);
 
 // ---- Change this to your URL (keep it short; NTAG213 ~144B total user memory) ----
 // We use NDEF URI prefix 0x03 = "https://"
-const char* URL_NO_PREFIX = "www.astv.ro/despre-as-tv/ ";
+const char* URL_NO_PREFIX = "www.deblocat.ro";
 
 // Start page for user data on NTAG213/Ultralight
 const uint8_t FIRST_DATA_PAGE = 4;
@@ -97,11 +97,15 @@ bool writeUltralightPages(const uint8_t* data, size_t len) {
 
 void setup() {
   Serial.begin(115200);
-  delay(100);
-
+  delay(10000);
+  Serial.println("App started");
+  pinMode(2,OUTPUT);
+  digitalWrite(2,0);
   // Explicitly init SPI pins on ESP32
   SPI.begin(PIN_SPI_SCK, PIN_SPI_MISO, PIN_SPI_MOSI, PIN_SPI_SS);
-
+  delay(1000);
+  pinMode(2,OUTPUT);
+  digitalWrite(2,1);
   nfc.begin();
   // Recommended setup for PN532
   nfc.SAMConfig(); // configure board to read tags

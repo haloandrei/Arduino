@@ -1,10 +1,10 @@
 #include <Adafruit_NeoPixel.h>
 
 #define LED_PIN 2            // GPIO pin connected to the LED strip
-#define NUM_LEDS 280          // Total number of LEDs in the strip
+#define NUM_LEDS 360          // Total number of LEDs in the strip
 
 Adafruit_NeoPixel strip(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
-int n, max1, poz, nr;
+int n, max1, poz, nr,strobe = 500;
 void setup() {
   strip.begin();             // Initialize the LED strip
   strip.show();              // Turn off all LEDs initially
@@ -12,6 +12,7 @@ void setup() {
   
   Serial.begin(115200);
   Serial.println("LEDs ready to be controlled by index.");
+
 }
 
 void aprinde_becul(int i, int red, int green, int blue){
@@ -34,8 +35,6 @@ int prim(int n){
 void loop() {
 
 
-
-  int a = 8, b = 30;
   // for(int i = 1; i <= b; i++)
   //   {
   //       aprinde_becul(a*i, 255, 255, 255);
@@ -56,20 +55,32 @@ void loop() {
   //   aprinde_becul(i, 0, 0, 0);
   // delay(100);
   // }
-  // for (int i = NUM_LEDS; i > NUM_LEDS/3*2; i--)  
-  //    aprinde_becul(i, 255, 0, 0);
-  // for (int i = NUM_LEDS/3*2; i > NUM_LEDS/3; i--)  
-  //    aprinde_becul(i, 255, 255, 0);
-  // for (int i = NUM_LEDS/3; i > 0; i--)  
-  //    aprinde_becul(i, 0, 0, 255);
-  // delay(1000);
-  for (int i = 0; i < NUM_LEDS; i++) {
-        inchide_becul(i); // Turn off all LEDs
-   }
+  
+   int nleds=255 , r=0, g=0, b=0;
 
+    for(int i=1; i<=nleds; i++)
+    {
+       
+            strip.setPixelColor(i,strip.Color(51 , 0, 0));
+
+
+    }
+    //    strip.setPixelColor(i,strip.Color(rosu, verde, albastru));
+
+strip.show();
+
+
+
+  delay(100);
+  for (int i = 0; i < NUM_LEDS; i++) {
+        strip.setPixelColor(i, strip.Color(0, 0, 0));
+   }
+   strip.show();
+  Serial.println("Gata o tura");
   // for (int i = 0; i < NUM_LEDS; i++) {
   //      inchide_becul(i); // Turn off all LEDs
   // }
 
-  delay(1000); // Short delay before the loop repeats 
+  delay(strobe); // Short delay before the loop repeats 
+
 }
