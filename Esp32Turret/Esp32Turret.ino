@@ -1,30 +1,37 @@
 #include <ESP32Servo.h>
 
-Servo servoX; // 180 Degree Standard Servo
-Servo servoY; // 360 Degree Continuous Servo
+Servo servoX; // 180 Degree Standard
+Servo servoY; // 360 Degree Continuous
 
-// GPIO Pins
-const int pinX = 13;
-const int pinY = 14;
+// --- PINS ---
+const int pinServoX = 13;
+const int pinServoY = 14;
+const int pinJoyX   = 32; // Analog Pin
+const int pinJoyY   = 33; // Analog Pin
+const int pinJoySW  = 27; // Switch Pin (Digital)
+const int pinLaser = 2;
 
-// --- Settings for X (180 deg) ---
-int posX = 90;         // Current position tracker
-const int stepAngle = 10; // How many degrees to move per press
+// --- SETTINGS X (180 Deg) ---
+int posX = 90;           // Start at center
+const int stepAngle = 2; // Speed of movement
 
-// --- Settings for Y (360 deg) ---
-const int Y_STOP = 90;       // Center "Stop" signal (Tweak if it drifts)
-const int Y_SPEED_UP = 100;  // Speed for 'W' (Values > 90)
-const int Y_SPEED_DOWN = 80; // Speed for 'S' (Values < 90)
-const int Y_BURST = 100;     // How long to spin in milliseconds per press
+// --- SETTINGS Y (360 Deg) ---
+const int Y_STOP = 90;       // Stop Value (Calibrate if drifting)
+const int Y_SPEED_FWD = 95;  // Speed Up
+const int Y_SPEED_REV = 85;  // Speed Down
+
+// --- TIMING ---
+unsigned long lastUpdate = 0;
+const int updateInterval = 20; // 50Hz update rate
 
 void setup() {
   Serial.begin(115200);
-  Serial.println("--- Hybrid Servo Control Started ---");
-  Serial.println("Controls:");
-  Serial.println("  A/D -> X-Axis (Position 0-180)");
-  Serial.println("  W/S -> Y-Axis (Continuous Burst)");
+  
+  // Configure the button with internal pull-up resistor
+  // This means the pin reads HIGH when open, and LOW when pressed.
+  pinMode(pinJoySW, INPUT_PULLUP);
+  pinMode(pinLaser, OUTPUT);
 
-  // Allocate timers for ESP32
   ESP32PWM::allocateTimer(0);
   ESP32PWM::allocateTimer(1);
   ESP32PWM::allocateTimer(2);
@@ -32,50 +39,61 @@ void setup() {
 
   servoX.setPeriodHertz(50);
   servoY.setPeriodHertz(50);
+  
+  servoX.attach(pinServoX, 500, 2500);
+  servoY.attach(pinServoY, 500, 2500);
 
-  servoX.attach(pinX, 500, 2500);
-  servoY.attach(pinY, 500, 2500);
-
-  // Initialize
-  servoX.write(posX);   // Go to center
-  servoY.write(Y_STOP); // Ensure stopped
-}
-
-// Helper to move the 360 motor for a short time
-void burstMoveY(int speed) {
-  servoY.write(speed);   // Start moving
-  delay(Y_BURST);        // Wait
-  servoY.write(Y_STOP);  // Stop
+  // Initial Home Position
+  servoX.write(posX);
+  servoY.write(Y_STOP);
+  
+  Serial.println("--- System Ready ---");
 }
 
 void loop() {
-  if (Serial.available() > 0) {
-    char command = Serial.read();
+  // 1. CHECK RESET BUTTON FIRST
+  // The switch connects to Ground, so LOW means pressed.
+  if (digitalRead(pinJoySW) == LOW) {
+    Serial.println(">>> FIRE ACTIVATED <<<");
+    digitalWrite(2, HIGH);
+    
+    delay(500); 
+  }
+  else digitalWrite(2, LOW);
 
-    // --- X AXIS LOGIC (Position Tracking) ---
-    if (command == 'a') {
+  // 2. MOVEMENT LOGIC
+  if (millis() - lastUpdate >= updateInterval) {
+    lastUpdate = millis();
+
+    int valX = analogRead(pinJoyX);
+    int valY = analogRead(pinJoyY);
+
+    // --- X-AXIS (Position) ---
+    // Move Left
+    if (valX < 1000) {
       posX -= stepAngle;
-      if (posX < 0) posX = 0; // Constrain
+      if (posX < 0) posX = 0;
       servoX.write(posX);
-      Serial.print("X Position: "); Serial.println(posX);
     }
-    
-    else if (command == 'd') {
+    // Move Right
+    else if (valX > 3000) {
       posX += stepAngle;
-      if (posX > 180) posX = 180; // Constrain
+      if (posX > 180) posX = 180;
       servoX.write(posX);
-      Serial.print("X Position: "); Serial.println(posX);
     }
 
-    // --- Y AXIS LOGIC (Time-based Burst) ---
-    else if (command == 'w') {
-      Serial.println("Y: Moving Up...");
-      burstMoveY(Y_SPEED_UP);
+    // --- Y-AXIS (Continuous Speed) ---
+    // Move Forward
+    if (valY < 1000) {
+      servoY.write(Y_SPEED_FWD);
     }
-    
-    else if (command == 's') {
-      Serial.println("Y: Moving Down...");
-      burstMoveY(Y_SPEED_DOWN);
+    // Move Backward
+    else if (valY > 3000) {
+      servoY.write(Y_SPEED_REV);
+    }
+    // Stop (Deadzone)
+    else {
+      servoY.write(Y_STOP);
     }
   }
 }
