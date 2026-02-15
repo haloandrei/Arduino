@@ -12,7 +12,7 @@ Adafruit_PN532 nfc(PIN_SPI_SS);
 
 // ---- Change this to your URL (keep it short; NTAG213 ~144B total user memory) ----
 // We use NDEF URI prefix 0x03 = "https://"
-const char* URL_NO_PREFIX = "www.deblocat.ro";
+const char* URL_NO_PREFIX = "haloandrei.com/h/cabinet-infoel-corp-d";
 
 // Start page for user data on NTAG213/Ultralight
 const uint8_t FIRST_DATA_PAGE = 4;
