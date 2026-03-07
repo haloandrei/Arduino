@@ -50,22 +50,16 @@ void setup() {
   Serial.println("--- System Ready ---");
 }
 
-void loop() {
-  
-    digitalWrite(pinLaser, HIGH);
-    delay(100); 
-    digitalWrite(pinLaser, LOW);
-   servoX.write(120);
-   delay(100); 
-   digitalWrite(pinLaser, HIGH);
-   delay(100);
-   digitalWrite(pinLaser, LOW);
-   delay(100);
-   servoX.write(130);
-   delay(100); 
-   digitalWrite(pinLaser, HIGH);
-   delay(100);
-   digitalWrite(pinLaser, LOW);
+int pozitie[100] = {30,60, 45, 90, 20, 180, 78};
 
- 
+void loop() {
+  for(int i=0;i<=6;i++)
+  {
+    servoX.write(pozitie[i]);
+    delay(1000);
+    digitalWrite(pinLaser, 1);
+  }
+
+
+
 }

@@ -1,7 +1,7 @@
 
 void setup() {
   Serial.begin(115200);
-  pinMode(2, OUTPUT);
+  pinMode(12, OUTPUT);
 }
 
 void loop() {
@@ -23,6 +23,9 @@ void loop() {
 
     Serial.println("Incepe IoT-ul in Romania, cu numarul: " + String(x));
     Serial.println(x);
-    
+    if (x==1)
+    digitalWrite(12, 0);
+    else
+     digitalWrite(12, 1);
     
 }

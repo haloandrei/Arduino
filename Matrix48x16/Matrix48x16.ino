@@ -1,117 +1,182 @@
 #include <Adafruit_NeoPixel.h>
+#include <avr/pgmspace.h>
 
-// --- CONFIGURATION ---
-#define PIN         12       // ESP32 Pin connected to Data In
-#define PANELS      3       // Number of panels
-#define PANEL_W     16      // Width of one panel
-#define PANEL_H     16      // Height of one panel
-#define BRIGHT_CAP  15      // Max brightness per channel (Safety Wrapper)
+// --- CONFIG ---
+#define PIN         2
+#define PANELS      3
+#define PANEL_W     16
+#define PANEL_H     16
+#define BRIGHT_CAP  50
 
-// Calculated Dimensions (48 x 16)
-const uint8_t WIDTH  = PANEL_W * PANELS;
-const uint8_t HEIGHT = PANEL_H;
-const uint16_t NUM_LEDS = WIDTH * HEIGHT;
+const uint8_t WIDTH  = 48;
+const uint8_t HEIGHT = 16;
+const uint16_t NUM_LEDS = 768;
 
 Adafruit_NeoPixel strip(NUM_LEDS, PIN, NEO_GRB + NEO_KHZ800);
 
-// --- 1. SAFETY WRAPPER (Prevents blinding/melting) ---
-uint32_t safeColor(uint8_t r, uint8_t g, uint8_t b) {
-  if (r > BRIGHT_CAP) r = BRIGHT_CAP;
-  if (g > BRIGHT_CAP) g = BRIGHT_CAP;
-  if (b > BRIGHT_CAP) b = BRIGHT_CAP;
-  return strip.Color(r, g, b);
-}
+// --- PALETTE ---
+uint32_t palette[5]; // build in setup after strip.begin()
 
+// --- INITIAL IMAGE IN FLASH ---
+// Edit these numbers (0..4) however you want.
+// Tip: each row must contain 48 values.
+const uint8_t canvasInit[HEIGHT][WIDTH] PROGMEM = {
+  // y = 0
+  { 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2 },
+  // y = 1
+  { 1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2 },
+  // y = 2
+  { 1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2 },
+  // y = 3
+  { 1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2 },
+  // y = 4
+  { 1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2 },
+  // y = 5
+  { 1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2 },
+  // y = 6
+  { 1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2 },
+  // y = 7
+  { 1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2 },
+  // y = 8
+  { 1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2 },
+  // y = 9
+  { 1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2 },
+  // y = 10
+  { 1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2 },
+  // y = 11
+  { 1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2 },
+  // y = 12
+  { 1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2 },
+  // y = 13
+  { 1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2 },
+  // y = 14
+  { 1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2 },
+  // y = 15
+  { 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2 }
+};
+
+// --- RUNTIME CANVAS IN RAM (this is what fill modifies) ---
+uint8_t canvas[HEIGHT][WIDTH];
+
+// --- VERTICAL TOPOLOGY MAPPING ---
 uint16_t xyToIndex(uint8_t x, uint8_t y) {
-  if (x >= WIDTH || y >= HEIGHT) return 0; 
+  if (x >= WIDTH || y >= HEIGHT) return 0;
+  uint8_t panel = x / PANEL_W;
+  uint8_t lx = x % PANEL_W;
+  uint8_t ly = y;
 
-  uint8_t panel = x / PANEL_W;      // Panel 0, 1, or 2
-  uint8_t lx = x % PANEL_W;         // Local X (0-15)
-  uint8_t ly = y;                   // Local Y (0-15)
-
-  // Calculate the base index for this column
-  // (Each column has 16 pixels)
-  uint16_t colBase = lx * PANEL_H; 
-
+  uint16_t colBase = (uint16_t)lx * PANEL_H;
   uint16_t localIndex;
-  
-  // Vertical Zig-Zag Logic
-  if (lx % 2 == 0) {
-    // Even Columns: DOWN (Top -> Bottom)
-    // Index increases as Y increases
-    localIndex = colBase + ly;
-  } else {
-    // Odd Columns: UP (Bottom -> Top)
-    // Index decreases as Y increases
-    localIndex = colBase + (PANEL_H - 1 - ly);
-  }
-
-  return (panel * 256) + localIndex;
+  if (lx % 2 == 0) localIndex = colBase + ly;
+  else             localIndex = colBase + (PANEL_H - 1 - ly);
+  return (uint16_t)panel * 256 + localIndex;
 }
 
-// --- 3. YOUR FUNCTION: Spiral Rainbow ---
-void drawSpiralRainbow() {
+void loadCanvasFromProgmem() {
+  for (uint8_t y = 0; y < HEIGHT; y++) {
+    for (uint8_t x = 0; x < WIDTH; x++) {
+      canvas[y][x] = pgm_read_byte(&(canvasInit[y][x]));
+    }
+  }
+}
+
+void drawCanvas() {
+  for (uint8_t y = 0; y < HEIGHT; y++) {
+    for (uint8_t x = 0; x < WIDTH; x++) {
+      uint8_t c = canvas[y][x];
+      if (c > 4) c = 0; // safety clamp
+      strip.setPixelColor(xyToIndex(x, y), palette[c]);
+    }
+  }
+  strip.show();
+}
+
+uint8_t canvas2[16][48] = {
+
+  {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+
+  {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,3,3,3,3,0,0,0,0,0},
+
+  {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,0,0,0,3,0,0,0,3,0,0,0,0,0},
+
+  {0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,0,0,0,0,0,0,0,0,3,0,0,0,0,0},
+
+  {0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,3,3,0,0,0,3,3,3,3,3,0,0,0,0,0},
+
+  {0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,0,3,0,0,0,0,0,3,3,0,3,3,3,3,0},
+
+  {0,0,0,0,0,0,0,0,0,1,1,1,0,1,0,1,1,0,0,0,0,0,0,0,0,0,0,0,1,1,0,3,0,0,3,0,0,0,3,3,0,0,0,0,0,0,0,0},
+
+  {0,0,0,0,0,0,0,0,0,1,0,0,1,1,0,0,1,1,0,0,0,0,1,0,0,0,0,1,0,1,0,3,3,3,3,0,0,3,3,0,0,0,0,0,0,0,0,0},
+
+  {0,0,0,0,0,0,0,0,0,1,1,0,1,1,0,0,0,1,0,0,0,1,1,0,0,0,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,2,2,0},
+
+  {0,0,0,0,0,0,0,0,0,0,1,0,1,1,1,1,1,1,0,0,0,1,0,0,0,1,0,0,1,1,1,1,1,0,0,0,0,0,0,0,0,2,2,0,2,2,0,0},
+
+  {0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,0,1,1,1,0,0,1,1,1,1,1,0,0,1,0,0,0,0,0,0,0,0,0,2,2,0,2,2,0,0,0},
+
+  {0,0,0,0,0,0,0,0,1,1,0,1,1,1,0,0,0,1,1,1,1,1,1,1,0,0,0,0,0,0,1,0,0,0,0,0,0,2,2,2,2,0,0,2,0,0,0,0},
+
+  {0,0,0,0,0,0,0,0,1,0,0,0,1,0,1,1,1,1,1,0,1,0,1,0,0,0,0,0,0,1,1,0,0,0,0,2,0,0,2,2,0,0,2,0,0,0,0,0},
+
+  {0,0,0,0,0,0,0,1,0,0,0,1,1,1,1,1,0,0,0,0,1,1,0,0,0,0,0,1,1,0,0,0,0,0,0,2,0,0,2,2,0,0,2,0,0,0,0,0},
+
+  {0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,2,2,2,2,0,2,0,2,0,0,0,0,0},
+
+  {0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,2,0,0,2,2,0,0,0,0,0,0}
+
+};
+
+void draw(){
   strip.clear();
-  
-  int top = 0, bottom = HEIGHT - 1;
-  int left = 0, right = WIDTH - 1;
-  long pixelHue = 0; // Stores color (0 to 65535)
-
-  // Loop until boundaries meet
-  while (top <= bottom && left <= right) {
-    
-    // Top Row (Left to Right)
-    for (int i = left; i <= right; i++) {
-      strip.setPixelColor(xyToIndex(i, top), strip.ColorHSV(pixelHue, 255, BRIGHT_CAP));
-      strip.show();
-      pixelHue += 100; // Shift color slightly
-      delay(5);
-    }
-    top++;
-
-    // Right Column (Top to Bottom)
-    for (int i = top; i <= bottom; i++) {
-      strip.setPixelColor(xyToIndex(right, i), strip.ColorHSV(pixelHue, 255, BRIGHT_CAP));
-      strip.show();
-      pixelHue += 100;
-      delay(5);
-    }
-    right--;
-
-    // Bottom Row (Right to Left)
-    if (top <= bottom) {
-      for (int i = right; i >= left; i--) {
-        strip.setPixelColor(xyToIndex(i, bottom), strip.ColorHSV(pixelHue, 255, BRIGHT_CAP));
-        strip.show();
-        pixelHue += 100;
-        delay(5);
-      }
-      bottom--;
-    }
-
-    // Left Column (Bottom to Top)
-    if (left <= right) {
-      for (int i = bottom; i >= top; i--) {
-        strip.setPixelColor(xyToIndex(left, i), strip.ColorHSV(pixelHue, 255, BRIGHT_CAP));
-        strip.show();
-        pixelHue += 100;
-        delay(5);
-      }
-      left++;
-    }
-  }
+  Serial.println("Am ajuns aici");
+  for (int i=0;i<16;i++)
+    for (int j=0;j<48;j++)
+      strip.setPixelColor(xyToIndex(i, j), strip.ColorHSV(palette[canvas2[i][j]], 255, BRIGHT_CAP));
+  strip.show();
 }
 
-// --- SETUP & LOOP ---
+// --- FLOOD FILL (recursive) ---
+void recursiveFill(int x, int y, uint8_t targetColor, uint8_t replaceColor) {
+  if (x < 0 || x >= WIDTH || y < 0 || y >= HEIGHT) return;
+  if (canvas[y][x] != targetColor) return;
+
+  canvas[y][x] = replaceColor;
+  strip.setPixelColor(xyToIndex((uint8_t)x, (uint8_t)y), palette[replaceColor]);
+  strip.show();
+  delay(30);
+
+  recursiveFill(x + 1, y, targetColor, replaceColor);
+  recursiveFill(x - 1, y, targetColor, replaceColor);
+  recursiveFill(x, y + 1, targetColor, replaceColor);
+  recursiveFill(x, y - 1, targetColor, replaceColor);
+}
+
 void setup() {
+  Serial.begin(115200);
+
   strip.begin();
-  strip.setBrightness(255); // We control brightness via safeColor/ColorHSV 'v' parameter
-  strip.show(); 
-  
-  // Run once to test
-  drawSpiralRainbow();
+  strip.setBrightness(BRIGHT_CAP);
+  strip.show();
+
+  Serial.println("Incepe programul");
+  // Build palette after strip is initialized
+  palette[0] = strip.Color(0, 0, 0);
+  palette[1] = strip.Color(BRIGHT_CAP, 0, 0);
+  palette[2] = strip.Color(0, 0, BRIGHT_CAP);
+  palette[3] = strip.Color(0, BRIGHT_CAP, 0);
+  palette[4] = strip.Color(BRIGHT_CAP, BRIGHT_CAP, 0);
+Serial.println("Incepe desenul");
+  //loadCanvasFromProgmem();
+  draw();
+
+  delay(1000);
+
+  // Example: fill starting at (0,0) replacing 0 with 4
+  //recursiveFill(0, 0, 0, 4);
 }
 
 void loop() {
-  // Empty loop
+  // Hold result
+  delay(1000);
 }

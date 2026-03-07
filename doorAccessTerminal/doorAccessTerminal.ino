@@ -8,8 +8,8 @@
 // 2) API base URL (https://...)
 // 3) device token from POST /v1/access-hooks response
 // 4) relay pin
-const char* WIFI_SSID = "haloaWifi";
-const char* WIFI_PASSWORD = "Alc@traz11!";
+const char* WIFI_SSID = "Energie_D";
+const char* WIFI_PASSWORD = "Infoel2025!";
 // API host exposing /v1/* endpoints.
 // Local dev usually: http://localhost:8081 (not reachable from ESP32 unless same LAN + routing).
 // Hosted production: https://haloandrei.com
