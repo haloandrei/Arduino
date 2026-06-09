@@ -10,15 +10,15 @@
 // Use hardware SPI; the Adafruit PN532 driver only needs SS here
 Adafruit_PN532 nfc(PIN_SPI_SS);
 
-// ---- Change this to your URL (keep it short; NTAG213 ~144B total user memory) ----
+// ---- Change this to your URL ----
 // We use NDEF URI prefix 0x03 = "https://"
-const char* URL_NO_PREFIX = "haloandrei.com/h/cabinet-infoel-corp-d";
+const char* URL_NO_PREFIX = "haloandrei.com/treasure/scan/54ffacae-75dc-494b-9fa5-af2c7dbe5236";
 
-// Start page for user data on NTAG213/Ultralight
+// Start page for user data on NTAG215/Ultralight
 const uint8_t FIRST_DATA_PAGE = 4;
 
-// Max user bytes on NTAG213 = 144 (pages 4..39 inclusive)
-const size_t NTAG213_USER_BYTES = 144;
+// Max user bytes on NTAG215 = 504 (pages 4..129 inclusive)
+const size_t NTAG215_USER_BYTES = 504;
 
 // Build a simple NDEF URI record with TLV wrapper:
 // TLV: [0x03][len][NDEF bytes][0xFE]
@@ -62,10 +62,10 @@ void buildNdefUriTlv(const char* urlNoPrefix, uint8_t* outBuf, size_t& outLen) {
   outLen = i;
 }
 
-// Write the given buffer into NTAG213 user pages starting at page 4.
+// Write the given buffer into NTAG215 user pages starting at page 4.
 // Pads remaining bytes with 0x00.
 bool writeUltralightPages(const uint8_t* data, size_t len) {
-  // NTAG213 user memory: 144 bytes across pages 4..39 (36 pages * 4 bytes)
+  // NTAG215 user memory: 504 bytes across pages 4..129 (126 pages * 4 bytes)
   // We’ll fill as many pages as needed, then 0x00 pad the rest of the last page.
   uint8_t page = FIRST_DATA_PAGE;
   size_t pos = 0;
@@ -82,15 +82,12 @@ bool writeUltralightPages(const uint8_t* data, size_t len) {
     }
     page++;
 
-    // Avoid overrunning user memory on NTAG213
-    if ((page - FIRST_DATA_PAGE) * 4 > NTAG213_USER_BYTES) {
-      Serial.println("Data too large for NTAG213 user memory.");
+    // Avoid overrunning user memory on NTAG215
+    if ((page - FIRST_DATA_PAGE) * 4 > NTAG215_USER_BYTES) {
+      Serial.println("Data too large for NTAG215 user memory.");
       return false;
     }
   }
-
-  // (Optional) If you want to blank the rest of the current page block, we already pad zeros.
-  // If you want to blank *all remaining pages*, add a loop here (not necessary for NDEF).
 
   return true;
 }
@@ -101,12 +98,14 @@ void setup() {
   Serial.println("App started");
   pinMode(2,OUTPUT);
   digitalWrite(2,0);
+  
   // Explicitly init SPI pins on ESP32
   SPI.begin(PIN_SPI_SCK, PIN_SPI_MISO, PIN_SPI_MOSI, PIN_SPI_SS);
   delay(1000);
   pinMode(2,OUTPUT);
   digitalWrite(2,1);
   nfc.begin();
+  
   // Recommended setup for PN532
   nfc.SAMConfig(); // configure board to read tags
 
@@ -121,7 +120,7 @@ void setup() {
                 (uint8_t)(versiondata >> 8) & 0xFF,
                 (uint8_t)versiondata & 0xFF);
 
-  Serial.println("Bring an NTAG213 close to the antenna to WRITE the URL...");
+  Serial.println("Bring an NTAG215 close to the antenna to WRITE the URL...");
 }
 
 void loop() {
@@ -141,18 +140,14 @@ void loop() {
   }
   Serial.println();
 
-  // Check tag type supports NTAG/Ultralight commands
-  // (Ultralight/NTAG don’t need auth for writing user pages)
-  // Optional: You could call nfc.ntag2xx_ReadPage(4, buf) to sanity check.
-
   // Build TLV for our URL
-  uint8_t tlv[NTAG213_USER_BYTES]; // enough buffer
+  uint8_t tlv[NTAG215_USER_BYTES]; // Updated to NTAG215 buffer size
   size_t tlvLen = 0;
   buildNdefUriTlv(URL_NO_PREFIX, tlv, tlvLen);
 
   // Safety: ensure it fits
-  if (tlvLen > NTAG213_USER_BYTES) {
-    Serial.println("NDEF message too large for NTAG213.");
+  if (tlvLen > NTAG215_USER_BYTES) {
+    Serial.println("NDEF message too large for NTAG215.");
     delay(1500);
     return;
   }
