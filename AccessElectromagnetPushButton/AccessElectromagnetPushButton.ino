@@ -5,8 +5,8 @@
 #include <Ticker.h> // Included for background timers
 
 // Minimal required setup:
-const char* WIFI_SSID = "Energie_D";
-const char* WIFI_PASSWORD = "Infoel2025!";
+const char* WIFI_SSID = "Energie";
+const char* WIFI_PASSWORD = "Infoel20!";
 const char* API_BASE_URL = "https://haloandrei.com";
 const char* DEVICE_TOKEN = "BkkrGl76die6HQ1Vf6qUa-2_CtCJAoWADU8jxxuOk10";
 
