@@ -6,8 +6,10 @@
 #include <WiFiClientSecure.h>
 #include <Ticker.h> 
 #include <time.h> // Included for NTP real-time clock
+#include <ESP32Servo.h> // Use ESP32-specific servo library
 
 TFT_eSPI tft = TFT_eSPI(); 
+Servo lockServo;
 
 // Minimal required setup:
 const char* WIFI_SSID = "BradOEL";
@@ -17,6 +19,7 @@ const char* DEVICE_TOKEN = "BkkrGl76die6HQ1Vf6qUa-2_CtCJAoWADU8jxxuOk10";
 
 const uint8_t RELAY_PIN = 26;
 const uint8_t BUTTON_PIN = 25;
+const uint8_t SERVO_PIN = 27; // Connect SG90 PWM wire here
 
 const bool API_TLS_INSECURE = true;
 const char* API_ROOT_CA = R"EOF(
@@ -67,10 +70,9 @@ uint32_t backoffDelayMs(uint8_t attempt, uint32_t baseMs, uint32_t capMs) {
   return delayMs + (esp_random() % 150);
 }
 
-// Get standard formatted time
 String getFormattedTime() {
   struct tm timeinfo;
-  if (!getLocalTime(&timeinfo, 50)) { // 50ms wait
+  if (!getLocalTime(&timeinfo, 50)) {
     return "Syncing...";
   }
   char buffer[20];
@@ -78,9 +80,41 @@ String getFormattedTime() {
   return String(buffer);
 }
 
-// --- DISPLAY FUNCTION ---
+// --- DISPLAY & ANIMATION FUNCTIONS ---
 
-// Master function to manage TFT changes without flickering
+void drawAnimatedCheckmark(int cx, int cy) {
+  int startX = cx - 40;
+  int startY = cy;
+  int midX = cx - 10;
+  int midY = cy + 30;
+  int endX = cx + 50;
+  int endY = cy - 40;
+
+  // Animate first segment (left to bottom vertex)
+  for (int i = 0; i <= 10; i++) {
+    int curX = startX + (midX - startX) * i / 10;
+    int curY = startY + (midY - startY) * i / 10;
+    
+    // Draw thickness
+    for(int t = -5; t <= 5; t++) {
+       tft.drawLine(startX, startY + t, curX, curY + t, TFT_GREEN);
+    }
+    delay(15); // Frame delay for animation
+  }
+  
+  // Animate second segment (bottom vertex to top right)
+  for (int i = 0; i <= 15; i++) {
+    int curX = midX + (endX - midX) * i / 15;
+    int curY = midY + (endY - midY) * i / 15;
+    
+    // Draw thickness
+    for(int t = -5; t <= 5; t++) {
+       tft.drawLine(midX, midY + t, curX, curY + t, TFT_GREEN);
+    }
+    delay(15); // Frame delay for animation
+  }
+}
+
 void updateScreen(bool isUnlocked, String lastChecked = "") {
   static String prevLastChecked = "";
   static wl_status_t prevWifi = WL_IDLE_STATUS;
@@ -89,13 +123,10 @@ void updateScreen(bool isUnlocked, String lastChecked = "") {
   if (isUnlocked) {
     if (currentUI != UI_UNLOCKED) {
       tft.fillScreen(TFT_BLACK);
-      
-      // Draw a massive thick green checkmark
       int cy = tft.height() / 2 - 20;
-      for(int i = -5; i <= 5; i++) {
-        tft.drawLine(cx - 40, cy + i, cx - 10, cy + 30 + i, TFT_GREEN);
-        tft.drawLine(cx - 10, cy + 30 + i, cx + 50, cy - 40 + i, TFT_GREEN);
-      }
+      
+      // Trigger the animated checkmark
+      drawAnimatedCheckmark(cx, cy);
       
       tft.setTextColor(TFT_GREEN, TFT_BLACK);
       tft.setTextDatum(MC_DATUM);
@@ -152,7 +183,6 @@ void configureTlsClient(WiFiClientSecure& client) {
 void ensureWifiConnected() {
   if (WiFi.status() == WL_CONNECTED) return;
   
-  // Immediately reflect disconnected state
   updateScreen(false); 
 
   WiFi.disconnect(true, true);
@@ -171,7 +201,6 @@ void ensureWifiConnected() {
   Serial.print("[wifi] connected, ip=");
   Serial.println(WiFi.localIP());
   
-  // Refresh UI now that we are connected
   updateScreen(false, getFormattedTime());
 }
 
@@ -220,7 +249,7 @@ void endLocalUnlock() {
   digitalWrite(RELAY_PIN, LOW);
   relayActive = false;
   localUnlockActive = false;
-  triggerLockUI = true; // Safely tell loop() to revert screen
+  triggerLockUI = true; // Safely tell loop() to revert screen and servo
 }
 
 void IRAM_ATTR buttonISR() {
@@ -234,14 +263,14 @@ void IRAM_ATTR buttonISR() {
       digitalWrite(RELAY_PIN, HIGH);
       relayActive = true;
       localUnlockActive = true;
-      triggerUnlockUI = true; // Safely tell loop() to draw checkmark
+      triggerUnlockUI = true; // Safely tell loop() to draw checkmark and move servo
       
       localUnlockTimer.once_ms(7000, endLocalUnlock);
     }
   }
 }
 
-// --- RELAY CONTROL LOGIC ---
+// --- RELAY & SERVO CONTROL LOGIC ---
 
 void startUnlock(uint16_t durationSec, const String& commandId) {
   durationSec = constrain(durationSec, MIN_UNLOCK_SEC, MAX_UNLOCK_SEC);
@@ -256,7 +285,11 @@ void startUnlock(uint16_t durationSec, const String& commandId) {
   unlockUntilMs = millis() + (uint32_t)durationSec * 1000U;
   activeCommandId = commandId;
   
-  // Trigger UI Change
+  // Trigger Servo to 90 degrees
+  lockServo.write(90);
+  delay(300); // Allow physical servo to finish moving before animation starts
+  
+  // Trigger UI Change & Animation
   updateScreen(true);
   
   Serial.printf("[relay] unlock start for %u sec\n", durationSec);
@@ -269,6 +302,9 @@ void finishUnlockIfDue() {
 
   digitalWrite(RELAY_PIN, LOW);
   relayActive = false;
+  
+  // Return servo to 0 degrees
+  lockServo.write(0);
   
   // Revert UI to normal mode
   updateScreen(false, getFormattedTime());
@@ -355,6 +391,12 @@ bool pollOnceForCommand() {
 void setup() {
   Serial.begin(115200);
   
+  // Initialize Servo Timer and attach
+  ESP32PWM::allocateTimer(0);
+  lockServo.setPeriodHertz(50);      // standard 50 hz servo
+  lockServo.attach(SERVO_PIN, 500, 2400); 
+  lockServo.write(0);                // Start in locked position
+
   // Initialize TFT First
   tft.init();
   tft.setRotation(1); // Landscape mode usually works best for menus
@@ -379,14 +421,24 @@ void setup() {
 }
 
 void loop() {
-  // Check flags set by the ISR and apply UI changes safely
+  // Check flags set by the ISR and apply UI & hardware changes safely
   if (triggerUnlockUI) {
     triggerUnlockUI = false;
+    
+    // Swing servo to 90 degrees and let it finish
+    lockServo.write(90);
+    delay(300);
+    
+    // Draw animated UI
     updateScreen(true);
   }
   
   if (triggerLockUI) {
     triggerLockUI = false;
+    
+    // Return servo to 0
+    lockServo.write(0);
+    
     updateScreen(false, getFormattedTime());
   }
 
